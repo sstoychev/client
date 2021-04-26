@@ -10,65 +10,85 @@
         <br />
         <br />
 
-        <p>Debug</p>
+        <p>Received results (Debug)</p>
         <br />
         <div id="results" style="border:1px solid #000; padding:10px; width:300px; height:250px; overflow:auto; background:#eee;"></div>
         <br />
 
         <progress id='progressor' value="0" max='100', style="width:320px;"></progress>
         <span id="percentage" style="text-align:right; display:block; margin-top:5px;">0</span>
+        <br />
+        <br />
+        <br />
+
+        <p>Current top10:</p>
+        <ol id='top10'>
+        </ol>
     </body>
 </html>
 
 <script>
     var es;
 
-  function startTask() {
+    function startTask() {
     //   es = new EventSource('//polling-service.dtl.name/sse_progress.php', { withCredentials: true });
-      es = new EventSource('//polling-service.dtl.name/sse_progress.php');
+        es = new EventSource('//polling-service.dtl.name/sse_progress.php');
 
-      //a message is received
-      es.addEventListener('message', function(e) {
-          var result = JSON.parse( e.data );
+        //a message is received
+        es.addEventListener('message', function(e) {
+            var result = JSON.parse( e.data );
 
-          addLog(result.message);
+            addLog(result.message);
 
-          if(e.lastEventId == 'CLOSE') {
-              addLog('Received CLOSE closing');
-              es.close();
-              var pBar = document.getElementById('progressor');
-              pBar.value = pBar.max; //max out the progress bar
-          }
-          else {
-              var pBar = document.getElementById('progressor');
-              pBar.value = result.progress;
-              var perc = document.getElementById('percentage');
-              perc.innerHTML   = result.progress  + "%";
-              perc.style.width = (Math.floor(pBar.clientWidth * (result.progress/100)) + 15) + 'px';
-          }
-      });
-    //   es.onmessage = function(event) {
-    //     // const newElement = document.createElement("li");
-    //     // const eventList = document.getElementById("list");
+            if(e.lastEventId == 'CLOSE') {
+                addLog('Received CLOSE closing');
+                es.close();
+                var pBar = document.getElementById('progressor');
+                pBar.value = pBar.max; //max out the progress bar
+            }
+            else {
+                var pBar = document.getElementById('progressor');
+                pBar.value = result.progress;
+                var perc = document.getElementById('percentage');
+                perc.innerHTML   = result.progress  + "%";
+                perc.style.width = (Math.floor(pBar.clientWidth * (result.progress/100)) + 15) + 'px';
+            }
+        });
+        es.addEventListener('error', function(e) {
+            addLog('Error occurred');
+            es.close();
+        });
+    }
 
-    //     // newElement.textContent = "message: " + event.data;
-    //     // eventList.appendChild(newElement);
-    //     addLog(event.data)
-    //   }
-      es.addEventListener('error', function(e) {
-          addLog('Error occurred');
-          es.close();
-      });
-  }
+    function stopTask() {
+        es.close();
+        addLog('Interrupted');
+    }
 
-  function stopTask() {
-      es.close();
-      addLog('Interrupted');
-  }
+    function addLog(message) {
+        var r = document.getElementById('results');
+        r.innerHTML += message + '<br>';
+        r.scrollTop = r.scrollHeight;
+    }
 
-  function addLog(message) {
-      var r = document.getElementById('results');
-      r.innerHTML += message + '<br>';
-      r.scrollTop = r.scrollHeight;
-  }
+    var conn = new WebSocket('ws://listener-service.dtl.name:8080/chat');
+    conn.onopen = function(e) {
+        console.log("Connection established!");
+    };
+
+    conn.onmessage = function(e) {
+        topPlayers = JSON.parse(e.data);
+        var top10 = document.getElementById('top10');
+        //clean the list
+        while (top10.firstChild) {
+            top10.removeChild(top10.firstChild);
+        }
+        // add new items
+        Object.entries(topPlayers.leaderboard).forEach(([playerId, score]) => {
+            // console.log(`${key}: ${value}`)
+            var entry = document.createElement('li');
+            entry.appendChild(document.createTextNode(playerId+':'+score));
+            top10.appendChild(entry);
+        });
+    };
 </script>
