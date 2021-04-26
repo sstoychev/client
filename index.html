@@ -32,7 +32,7 @@
 
     function startTask() {
     //   es = new EventSource('//polling-service.dtl.name/sse_progress.php', { withCredentials: true });
-        es = new EventSource('//polling-service.dtl.name/sse_progress.php');
+        es = new EventSource('//polling-service.dtl.name/start.php');
 
         //a message is received
         es.addEventListener('message', function(e) {
@@ -61,8 +61,13 @@
     }
 
     function stopTask() {
-        es.close();
+        if (typeof es !== 'undefined') {
+            es.close();
+        }
         addLog('Interrupted');
+        var xhttp = new XMLHttpRequest();
+        xhttp.open("GET", "http://polling-service.dtl.name/stop.php", true);
+        xhttp.send();
     }
 
     function addLog(message) {
@@ -71,7 +76,7 @@
         r.scrollTop = r.scrollHeight;
     }
 
-    var conn = new WebSocket('ws://listener-service.dtl.name:8080/chat');
+    var conn = new WebSocket('ws://listener-service.dtl.name:8080/leaderboard');
     conn.onopen = function(e) {
         console.log("Connection established!");
     };
